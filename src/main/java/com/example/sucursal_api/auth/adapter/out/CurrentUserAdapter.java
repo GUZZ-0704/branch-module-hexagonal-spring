@@ -4,9 +4,9 @@ import com.example.sucursal_api.auth.port.out.CurrentUserPort;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -17,9 +17,15 @@ public class CurrentUserAdapter implements CurrentUserPort {
     @Override
     public UUID getUserId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth instanceof JwtAuthenticationToken jwt) {
-            Object uid = jwt.getToken().getClaims().get("uid");
-            return uid != null ? UUID.fromString(uid.toString()) : null;
+        if (auth == null) return null;
+        
+        // Obtener de details (set by JwtFilter)
+        Object details = auth.getDetails();
+        if (details instanceof Map<?, ?> map) {
+            Object uid = map.get("uid");
+            if (uid != null) {
+                return UUID.fromString(uid.toString());
+            }
         }
         return null;
     }
@@ -27,9 +33,15 @@ public class CurrentUserAdapter implements CurrentUserPort {
     @Override
     public UUID getEmployeeId() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth instanceof JwtAuthenticationToken jwt) {
-            Object eid = jwt.getToken().getClaims().get("eid");
-            return eid != null ? UUID.fromString(eid.toString()) : null;
+        if (auth == null) return null;
+        
+        // Obtener de details (set by JwtFilter)
+        Object details = auth.getDetails();
+        if (details instanceof Map<?, ?> map) {
+            Object eid = map.get("eid");
+            if (eid != null) {
+                return UUID.fromString(eid.toString());
+            }
         }
         return null;
     }

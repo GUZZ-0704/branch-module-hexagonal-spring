@@ -48,14 +48,17 @@ public class JwtFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        logger.info("JwtFilter: URI=" + request.getRequestURI() + ", Auth header present=" + (authHeader != null));
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            logger.warn("JwtFilter: No Bearer token found");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("No autorizado: token ausente");
             return;
         }
 
         String jwt = authHeader.substring(7);
+        logger.info("JwtFilter: Token received (first 20 chars): " + jwt.substring(0, Math.min(20, jwt.length())));
 
         try {
             Claims claims = Jwts.parserBuilder()
@@ -63,6 +66,8 @@ public class JwtFilter extends OncePerRequestFilter {
                     .build()
                     .parseClaimsJws(jwt)
                     .getBody();
+
+            logger.info("JwtFilter: Token valid! Subject: " + claims.getSubject());
 
             String username = claims.getSubject(); // "sub"
             String uidStr = String.valueOf(claims.get("uid"));
