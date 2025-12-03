@@ -16,6 +16,8 @@ public interface AssignBranchUseCase {
 
     AssignmentResponseDTO close(UUID assignmentId, CloseAssignmentRequestDTO dto);
 
+    AssignmentResponseDTO update(UUID assignmentId, AssignBranchRequestDTO dto);
+
     AssignmentResponseDTO getActiveByEmployee(UUID employeeId);
 
     List<AssignmentResponseDTO> listActiveByBranch(UUID branchId);

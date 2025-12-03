@@ -134,10 +134,19 @@ public class BranchPhoneService implements BranchPhoneUseCase {
     @Transactional
     public void delete(UUID branchId, UUID phoneId) {
         ensureBranchExists(branchId);
-        BranchPhone current = repo.findById(phoneId);
-        if (!current.getBranchId().equals(branchId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El teléfono no pertenece a la sucursal especificada.");
+        try {
+            BranchPhone current = repo.findById(phoneId);
+            if (!current.getBranchId().equals(branchId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El teléfono no pertenece a la sucursal especificada.");
+            }
+            repo.delete(phoneId);
+        } catch (java.util.NoSuchElementException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede eliminar el teléfono porque está en uso o tiene referencias activas.");
+        } catch (Exception ex) {
+            // Cualquier otro error persistente se traduce como conflicto para el cliente
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No se pudo eliminar el teléfono: " + ex.getMessage());
         }
-        repo.delete(phoneId);
     }
 }

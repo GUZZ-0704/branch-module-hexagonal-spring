@@ -1,13 +1,12 @@
 package com.example.sucursal_api.assigment.application;
 
-
+import com.example.sucursal_api.assigment.port.out.EmployeeBranchAssignmentRepository;
+import com.example.sucursal_api.assigment.port.out.EmployeeCorporatePhoneAssignmentRepository;
 import com.example.sucursal_api.assigment.domain.EmployeeBranchAssignment;
 import com.example.sucursal_api.assigment.dto.AssignBranchRequestDTO;
 import com.example.sucursal_api.assigment.dto.AssignmentResponseDTO;
 import com.example.sucursal_api.assigment.dto.CloseAssignmentRequestDTO;
 import com.example.sucursal_api.assigment.port.in.AssignBranchUseCase;
-import com.example.sucursal_api.assigment.port.out.EmployeeBranchAssignmentRepository;
-import com.example.sucursal_api.assigment.port.out.EmployeeCorporatePhoneAssignmentRepository;
 import com.example.sucursal_api.branch.port.out.BranchRepository;
 import com.example.sucursal_api.employee.port.out.EmployeeRepository;
 import org.springframework.http.HttpStatus;
@@ -117,11 +116,37 @@ public class AssignBranchService implements AssignBranchUseCase {
     }
 
     @Override
+    @Transactional
+    public AssignmentResponseDTO update(UUID assignmentId, AssignBranchRequestDTO dto) {
+        var current = repo.findById(assignmentId);
+        if (current.getEndDate() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "La asignación ya está cerrada.");
+        }
+
+        if (dto.startDate() != null) {
+            current.setStartDate(dto.startDate());
+        }
+        if (dto.position() != null) {
+            current.setPosition(dto.position());
+        }
+        if (dto.notes() != null) {
+            current.setNotes(dto.notes());
+        }
+
+        var saved = repo.save(current);
+        return new AssignmentResponseDTO(
+                saved.getId(), saved.getEmployeeId(), saved.getBranchId(),
+                saved.getStartDate(), saved.getEndDate(), saved.getPosition(),
+                saved.getNotes(), saved.isActive()
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public AssignmentResponseDTO getActiveByEmployee(UUID employeeId) {
         ensureEmployee(employeeId);
         var a = repo.findActiveByEmployee(employeeId);
-        if (a == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No hay asignación activa para el empleado.");
+        if (a == null) return null;
         return new AssignmentResponseDTO(
                 a.getId(), a.getEmployeeId(), a.getBranchId(),
                 a.getStartDate(), a.getEndDate(), a.getPosition(), a.getNotes(), a.isActive()

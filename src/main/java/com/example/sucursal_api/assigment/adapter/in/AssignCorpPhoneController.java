@@ -7,6 +7,8 @@ import com.example.sucursal_api.assigment.port.in.AssignCorpPhoneUseCase;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
@@ -41,7 +43,14 @@ public class AssignCorpPhoneController {
 
     @GetMapping("/api/phones/{branchPhoneId}/assignment/active")
     public ResponseEntity<CorpPhoneAssignmentResponseDTO> getActiveByPhone(@PathVariable UUID branchPhoneId) {
-        return ResponseEntity.ok(useCase.getActiveByPhone(branchPhoneId));
+        try {
+            return ResponseEntity.ok(useCase.getActiveByPhone(branchPhoneId));
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                return ResponseEntity.noContent().build();
+            }
+            throw e;
+        }
     }
 }
 
