@@ -8,8 +8,12 @@ import com.example.sucursal_api.branch.dto.BranchStatusUpdateDTO;
 import com.example.sucursal_api.branch.dto.BranchUpdateDTO;
 import com.example.sucursal_api.branch.port.in.BranchUseCase;
 import com.example.sucursal_api.branch.port.out.BranchRepository;
+import com.example.sucursal_api.container.port.out.ContainerInfo;
+import com.example.sucursal_api.container.port.out.ContainerManager;
 import com.example.sucursal_api.image.domain.BranchImage;
 import com.example.sucursal_api.image.port.out.BranchImageRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,14 +26,19 @@ import java.util.UUID;
 @Service
 public class BranchService implements BranchUseCase {
 
+    private static final Logger log = LoggerFactory.getLogger(BranchService.class);
+
     private final BranchRepository repo;
     private final BranchMapper mapper;
     private final BranchImageRepository imageRepo;
+    private final ContainerManager containerManager;
 
-    public BranchService(BranchRepository repo, BranchMapper mapper, BranchImageRepository imageRepo) {
+    public BranchService(BranchRepository repo, BranchMapper mapper, 
+                         BranchImageRepository imageRepo, ContainerManager containerManager) {
         this.repo = repo;
         this.mapper = mapper;
         this.imageRepo = imageRepo;
+        this.containerManager = containerManager;
     }
 
     // Helper para convertir Branch a DTO con imagen de portada
@@ -72,6 +81,16 @@ public class BranchService implements BranchUseCase {
         );
 
         Branch saved = repo.save(branch);
+
+        // crear contenedor de inventario para la sucursal
+        try {
+            ContainerInfo containerInfo = containerManager.createInventoryContainer(slug);
+            log.info("Contenedor de inventario creado para sucursal {}: {}", 
+                     slug, containerInfo.internalUrl());
+        } catch (Exception e) {
+            log.error("Error creando contenedor para sucursal {}: {}", slug, e.getMessage());
+        }
+
         return toResponseWithCover(saved);
     }
 
@@ -125,12 +144,36 @@ public class BranchService implements BranchUseCase {
         Branch current = repo.findById(id);
         current.setActive(dto.active());
         Branch saved = repo.save(current);
+
+        // Iniciar o detener contenedor según el nuevo estado
+        try {
+            if (dto.active()) {
+                containerManager.startInventoryContainer(current.getSlug());
+                log.info("Contenedor de inventario iniciado para sucursal: {}", current.getSlug());
+            } else {
+                containerManager.stopInventoryContainer(current.getSlug());
+                log.info("Contenedor de inventario detenido para sucursal: {}", current.getSlug());
+            }
+        } catch (Exception e) {
+            log.error("Error gestionando contenedor para sucursal {}: {}", current.getSlug(), e.getMessage());
+        }
+
         return toResponseWithCover(saved);
     }
 
     @Override
     @Transactional
     public void delete(UUID id) {
+        Branch branch = repo.findById(id);
+        
+        // Eliminar contenedor antes de borrar la sucursal
+        try {
+            containerManager.removeInventoryContainer(branch.getSlug());
+            log.info("Contenedor de inventario eliminado para sucursal: {}", branch.getSlug());
+        } catch (Exception e) {
+            log.warn("No se pudo eliminar contenedor para {}: {}", branch.getSlug(), e.getMessage());
+        }
+        
         repo.delete(id);
     }
 
