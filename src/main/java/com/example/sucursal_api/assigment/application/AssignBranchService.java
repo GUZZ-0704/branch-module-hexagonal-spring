@@ -90,7 +90,6 @@ public class AssignBranchService implements AssignBranchUseCase {
     @Override
     @Transactional
     public AssignmentResponseDTO reassign(UUID employeeId, UUID toBranchId, AssignBranchRequestDTO dto) {
-        // atajo: delega en assign(...)
         return assign(employeeId, toBranchId, dto);
     }
 

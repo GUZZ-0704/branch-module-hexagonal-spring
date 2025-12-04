@@ -92,7 +92,7 @@ public class BranchService implements BranchUseCase {
     @Override
     @Transactional(readOnly = true)
     public List<BranchResponseDTO> list() {
-        return repo.findAll().stream().map(this::toResponseWithCover).toList();
+        return repo.findAll().stream().map(this::toResponseWithCover).filter(repo -> repo.active()).toList();
     }
 
     @Override

@@ -112,8 +112,9 @@ public class AuthService implements AuthUseCase {
     @Transactional(readOnly = true)
     public UserMeResponseDTO me() {
         UUID userId = currentUser.getUserId();
+
         if (userId == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado" + userId);
         }
 
         UserAccount acc = accountRepo.findById(userId);

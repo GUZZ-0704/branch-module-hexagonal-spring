@@ -61,7 +61,6 @@ public class BranchPhoneService implements BranchPhoneUseCase {
         if (repo.existsByBranchAndNumber(branchId, number)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ya existe un teléfono con ese número en la sucursal.");
         }
-        System.out.println("Branch Id" + branchId);
 
         PhoneKind kind = dto.kind();
         PhoneState state = dto.state();
