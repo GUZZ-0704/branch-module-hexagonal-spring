@@ -11,4 +11,6 @@ public interface EmployeeCorporatePhoneAssignmentJpaRepository extends JpaReposi
     Optional<EmployeeCorporatePhoneAssignmentEntity> findFirstByEmployeeIdAndEndDateIsNull(UUID employeeId);
 
     Optional<EmployeeCorporatePhoneAssignmentEntity> findFirstByBranchPhoneIdAndEndDateIsNull(UUID branchPhoneId);
+    
+    void deleteAllByBranchPhoneId(UUID branchPhoneId);
 }

@@ -16,5 +16,7 @@ public interface EmployeeCorporatePhoneAssignmentRepository {
     void closeActiveByEmployee(UUID employeeId);
 
     void closeActiveByPhone(UUID branchPhoneId);
+    
+    void deleteByPhone(UUID branchPhoneId);
 }
 

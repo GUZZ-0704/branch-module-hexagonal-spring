@@ -8,6 +8,8 @@ import com.example.sucursal_api.branch.dto.BranchStatusUpdateDTO;
 import com.example.sucursal_api.branch.dto.BranchUpdateDTO;
 import com.example.sucursal_api.branch.port.in.BranchUseCase;
 import com.example.sucursal_api.branch.port.out.BranchRepository;
+import com.example.sucursal_api.image.domain.BranchImage;
+import com.example.sucursal_api.image.port.out.BranchImageRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +24,29 @@ public class BranchService implements BranchUseCase {
 
     private final BranchRepository repo;
     private final BranchMapper mapper;
+    private final BranchImageRepository imageRepo;
 
-    public BranchService(BranchRepository repo, BranchMapper mapper) {
+    public BranchService(BranchRepository repo, BranchMapper mapper, BranchImageRepository imageRepo) {
         this.repo = repo;
         this.mapper = mapper;
+        this.imageRepo = imageRepo;
+    }
+
+    // Helper para convertir Branch a DTO con imagen de portada
+    private BranchResponseDTO toResponseWithCover(Branch branch) {
+        BranchImage coverImage = imageRepo.findCoverByBranch(branch.getId());
+        String coverUrl = coverImage != null ? coverImage.getUrl() : null;
+        return new BranchResponseDTO(
+                branch.getId(),
+                branch.getName(),
+                branch.getSlug(),
+                branch.getAddress(),
+                branch.getPrimaryPhone(),
+                branch.getLat(),
+                branch.getLng(),
+                branch.isActive(),
+                coverUrl
+        );
     }
 
     @Override
@@ -51,27 +72,27 @@ public class BranchService implements BranchUseCase {
         );
 
         Branch saved = repo.save(branch);
-        return mapper.toResponseDTO(saved);
+        return toResponseWithCover(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
     public BranchResponseDTO getById(UUID id) {
         Branch b = repo.findById(id);
-        return mapper.toResponseDTO(b);
+        return toResponseWithCover(b);
     }
 
     @Override
     @Transactional(readOnly = true)
     public BranchResponseDTO getBySlug(String slug) {
         Branch b = repo.findBySlug(slug);
-        return mapper.toResponseDTO(b);
+        return toResponseWithCover(b);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<BranchResponseDTO> list() {
-        return repo.findAll().stream().map(mapper::toResponseDTO).toList();
+        return repo.findAll().stream().map(this::toResponseWithCover).toList();
     }
 
     @Override
@@ -95,7 +116,7 @@ public class BranchService implements BranchUseCase {
         if (dto.lng() != null) current.setLng(dto.lng());
 
         Branch saved = repo.save(current);
-        return mapper.toResponseDTO(saved);
+        return toResponseWithCover(saved);
     }
 
     @Override
@@ -104,7 +125,7 @@ public class BranchService implements BranchUseCase {
         Branch current = repo.findById(id);
         current.setActive(dto.active());
         Branch saved = repo.save(current);
-        return mapper.toResponseDTO(saved);
+        return toResponseWithCover(saved);
     }
 
     @Override

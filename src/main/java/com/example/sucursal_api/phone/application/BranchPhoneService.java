@@ -1,6 +1,7 @@
 package com.example.sucursal_api.phone.application;
 
 
+import com.example.sucursal_api.assigment.port.out.EmployeeCorporatePhoneAssignmentRepository;
 import com.example.sucursal_api.branch.port.out.BranchRepository;
 import com.example.sucursal_api.phone.application.mapper.BranchPhoneMapper;
 import com.example.sucursal_api.phone.domain.BranchPhone;
@@ -27,11 +28,13 @@ public class BranchPhoneService implements BranchPhoneUseCase {
     private final BranchPhoneRepository repo;
     private final BranchRepository branchRepo;
     private final BranchPhoneMapper mapper;
+    private final EmployeeCorporatePhoneAssignmentRepository phoneAssignmentRepo;
 
-    public BranchPhoneService(BranchPhoneRepository repo, BranchRepository branchRepo, BranchPhoneMapper mapper) {
+    public BranchPhoneService(BranchPhoneRepository repo, BranchRepository branchRepo, BranchPhoneMapper mapper, EmployeeCorporatePhoneAssignmentRepository phoneAssignmentRepo) {
         this.repo = repo;
         this.branchRepo = branchRepo;
         this.mapper = mapper;
+        this.phoneAssignmentRepo = phoneAssignmentRepo;
     }
 
     private void ensureBranchExists(UUID branchId) {
@@ -139,9 +142,15 @@ public class BranchPhoneService implements BranchPhoneUseCase {
             if (!current.getBranchId().equals(branchId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El teléfono no pertenece a la sucursal especificada.");
             }
+            
+            // Eliminar todas las asignaciones asociadas a este teléfono antes de eliminarlo
+            phoneAssignmentRepo.deleteByPhone(phoneId);
+            
             repo.delete(phoneId);
         } catch (java.util.NoSuchElementException ex) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        } catch (ResponseStatusException ex) {
+            throw ex;
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "No se puede eliminar el teléfono porque está en uso o tiene referencias activas.");
         } catch (Exception ex) {

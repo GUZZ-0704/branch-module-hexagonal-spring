@@ -11,6 +11,7 @@ public record BranchResponseDTO(
         String primaryPhone,
         BigDecimal lat,
         BigDecimal lng,
-        boolean active
+        boolean active,
+        String coverImageUrl
 ) {}
 

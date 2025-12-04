@@ -7,6 +7,8 @@ import com.example.sucursal_api.assigment.port.out.EmployeeCorporatePhoneAssignm
 import com.example.sucursal_api.branch.adapter.out.BranchEntity;
 import com.example.sucursal_api.employee.adapter.out.EmployeeEntity;
 import com.example.sucursal_api.phone.adapter.out.BranchPhoneEntity;
+import com.example.sucursal_api.phone.adapter.out.BranchPhoneJpaRepository;
+import com.example.sucursal_api.phone.domain.PhoneState;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
@@ -20,16 +22,17 @@ public class EmployeeCorporatePhoneAssignmentRepositoryImpl implements EmployeeC
 
     private final EmployeeCorporatePhoneAssignmentJpaRepository jpa;
     private final EmployeeCorporatePhoneAssignmentMapper mapper;
+    private final BranchPhoneJpaRepository phoneJpa;
 
     @PersistenceContext
-    private final EntityManager entityManager;
+    private EntityManager entityManager;
 
     public EmployeeCorporatePhoneAssignmentRepositoryImpl(EmployeeCorporatePhoneAssignmentJpaRepository jpa,
                                                           EmployeeCorporatePhoneAssignmentMapper mapper,
-                                                          EntityManager entityManager) {
+                                                          BranchPhoneJpaRepository phoneJpa) {
         this.jpa = jpa;
         this.mapper = mapper;
-        this.entityManager = entityManager;
+        this.phoneJpa = phoneJpa;
     }
 
     @Override
@@ -69,6 +72,11 @@ public class EmployeeCorporatePhoneAssignmentRepositoryImpl implements EmployeeC
         if (active != null) {
             active.setEndDate(LocalDate.now());
             jpa.save(active);
+            // Liberar el teléfono (cambiar estado a AVAILABLE)
+            phoneJpa.findById(active.getBranchPhone().getId()).ifPresent(phone -> {
+                phone.setState(PhoneState.AVAILABLE);
+                phoneJpa.save(phone);
+            });
         }
     }
 
@@ -78,7 +86,18 @@ public class EmployeeCorporatePhoneAssignmentRepositoryImpl implements EmployeeC
         if (active != null) {
             active.setEndDate(LocalDate.now());
             jpa.save(active);
+            // Liberar el teléfono (cambiar estado a AVAILABLE)
+            phoneJpa.findById(branchPhoneId).ifPresent(phone -> {
+                phone.setState(PhoneState.AVAILABLE);
+                phoneJpa.save(phone);
+            });
         }
+    }
+    
+    @Override
+    public void deleteByPhone(UUID branchPhoneId) {
+        // Eliminar todas las asignaciones (activas e históricas) asociadas a este teléfono
+        jpa.deleteAllByBranchPhoneId(branchPhoneId);
     }
 }
 
