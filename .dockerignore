@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Maven
+target/
+!target/*.jar
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# Documentation
+README.md
+docs/
+
+# Test files
+src/test/
+
+# Uploads (se monta como volumen)
+uploads/
+
+# Scripts
+scripts/
