@@ -19,7 +19,7 @@ fi
 echo ""
 echo "[2/3] Construyendo imagen de inventario..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/../inventory" || exit 1
+cd "$SCRIPT_DIR/../../inventory-module-hexagonal-spring" || exit 1
 docker build -t inventory-service:latest .
 
 # 3. Mostrar estado

@@ -33,4 +33,11 @@ public interface ContainerManager {
      * Obtiene la URL interna del contenedor para comunicación
      */
     String getContainerUrl(String branchSlug);
+    
+    /**
+     * Obtiene el puerto del host mapeado al contenedor de inventario
+     * @param branchSlug identificador de la sucursal
+     * @return puerto del host o null si no existe
+     */
+    Integer getContainerHostPort(String branchSlug);
 }

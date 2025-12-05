@@ -19,7 +19,7 @@ if %ERRORLEVEL% neq 0 (
 REM 2. Construir imagen del servicio de inventario
 echo.
 echo [2/4] Construyendo imagen de inventario...
-cd /d "%~dp0..\inventory"
+cd /d "%~dp0..\..\inventory-module-hexagonal-spring"
 docker build -t inventory-service:latest .
 
 REM 3. Verificar que Docker está accesible via TCP (para Windows)

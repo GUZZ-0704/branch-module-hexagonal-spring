@@ -1,6 +1,7 @@
 package com.example.sucursal_api.chatbot.service;
 
 import com.example.sucursal_api.chatbot.dto.BranchStockResponseDTO;
+import com.example.sucursal_api.chatbot.dto.BatchResponseDTO;
 import com.example.sucursal_api.chatbot.dto.ProductResponseDTO;
 import com.example.sucursal_api.chatbot.dto.StockMovementResponseDTO;
 import com.example.sucursal_api.chatbot.dto.TransferRequestDTO;
@@ -59,6 +60,15 @@ public class InventoryProxyService {
                 .uri("/api/branch-stock/product/{productId}", productId)
                 .retrieve()
                 .bodyToFlux(BranchStockResponseDTO.class)
+                .collectList()
+                .block();
+    }
+
+    public List<BatchResponseDTO> listBatchesByProduct(UUID productId) {
+        return webClient.get()
+                .uri("/api/batches/product/{productId}", productId)
+                .retrieve()
+                .bodyToFlux(BatchResponseDTO.class)
                 .collectList()
                 .block();
     }

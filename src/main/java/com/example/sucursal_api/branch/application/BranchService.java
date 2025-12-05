@@ -41,10 +41,24 @@ public class BranchService implements BranchUseCase {
         this.containerManager = containerManager;
     }
 
-    // Helper para convertir Branch a DTO con imagen de portada
+    // Helper para convertir Branch a DTO con imagen de portada e inventario
     private BranchResponseDTO toResponseWithCover(Branch branch) {
         BranchImage coverImage = imageRepo.findCoverByBranch(branch.getId());
         String coverUrl = coverImage != null ? coverImage.getUrl() : null;
+        
+        // Obtener puerto del contenedor de inventario
+        Integer inventoryPort = null;
+        try {
+            if (containerManager.isContainerRunning(branch.getSlug())) {
+                String containerUrl = containerManager.getContainerUrl(branch.getSlug());
+                // La URL interna es http://inv-slug:8080, pero necesitamos el puerto del host
+                // Por ahora usamos el registry interno del ContainerManager
+                inventoryPort = getInventoryHostPort(branch.getSlug());
+            }
+        } catch (Exception e) {
+            log.debug("No se pudo obtener puerto de inventario para {}: {}", branch.getSlug(), e.getMessage());
+        }
+        
         return new BranchResponseDTO(
                 branch.getId(),
                 branch.getName(),
@@ -54,8 +68,20 @@ public class BranchService implements BranchUseCase {
                 branch.getLat(),
                 branch.getLng(),
                 branch.isActive(),
-                coverUrl
+                coverUrl,
+                inventoryPort
         );
+    }
+    
+    // Método helper para obtener el puerto del host del contenedor de inventario
+    private Integer getInventoryHostPort(String slug) {
+        try {
+            // El ContainerManager guarda el hostPort en el registro
+            // Usamos reflexión o añadimos un método al ContainerManager
+            return containerManager.getContainerHostPort(slug);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override
@@ -83,15 +109,36 @@ public class BranchService implements BranchUseCase {
         Branch saved = repo.save(branch);
 
         // crear contenedor de inventario para la sucursal
+        Integer inventoryPort = null;
         try {
             ContainerInfo containerInfo = containerManager.createInventoryContainer(slug);
-            log.info("Contenedor de inventario creado para sucursal {}: {}", 
-                     slug, containerInfo.internalUrl());
+            inventoryPort = containerInfo.hostPort();
+            log.info("Contenedor de inventario creado para sucursal {}: {} (puerto: {})", 
+                     slug, containerInfo.internalUrl(), inventoryPort);
         } catch (Exception e) {
             log.error("Error creando contenedor para sucursal {}: {}", slug, e.getMessage());
         }
 
-        return toResponseWithCover(saved);
+        return toResponseWithCoverAndPort(saved, inventoryPort);
+    }
+    
+    // Versión que acepta el puerto directamente (para create)
+    private BranchResponseDTO toResponseWithCoverAndPort(Branch branch, Integer inventoryPort) {
+        BranchImage coverImage = imageRepo.findCoverByBranch(branch.getId());
+        String coverUrl = coverImage != null ? coverImage.getUrl() : null;
+        
+        return new BranchResponseDTO(
+                branch.getId(),
+                branch.getName(),
+                branch.getSlug(),
+                branch.getAddress(),
+                branch.getPrimaryPhone(),
+                branch.getLat(),
+                branch.getLng(),
+                branch.isActive(),
+                coverUrl,
+                inventoryPort
+        );
     }
 
     @Override

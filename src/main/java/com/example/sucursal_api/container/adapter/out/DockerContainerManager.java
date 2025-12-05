@@ -130,10 +130,11 @@ public class DockerContainerManager implements ContainerManager {
 
         int hostPort = portRangeStart + portCounter.getAndIncrement();
         
-        // localhost a host.docker.internal para que el contenedor acceda al host
+        // Usar postgres-db directamente ya que está en la misma red Docker
         String containerDatasourceUrl = datasourceUrl
-                .replace("localhost", "host.docker.internal")
-                .replace("127.0.0.1", "host.docker.internal")
+                .replace("localhost", "postgres-db")
+                .replace("127.0.0.1", "postgres-db")
+                .replace("host.docker.internal", "postgres-db")
                 .replace("sucursales", "inventario");
 
         try {
@@ -168,6 +169,11 @@ public class DockerContainerManager implements ContainerManager {
             }
 
             dockerClient.startContainerCmd(container.getId()).exec();
+
+            // Esperar a que el contenedor esté listo usando la red interna de Docker.
+            // Usamos el alias de red (inv-<slug>) y el puerto interno del contenedor (8080).
+            // Si timeoutSeconds <= 0, se esperará indefinidamente hasta que responda.
+            waitForContainerReady(networkAlias, internalPort, 0);
 
             ContainerInfo info = new ContainerInfo(
                     container.getId(),
@@ -294,6 +300,34 @@ public class DockerContainerManager implements ContainerManager {
         String containerName = "inv-" + sanitizeSlug(branchSlug);
         return "http://" + containerName + ":" + internalPort;
     }
+    
+    @Override
+    public Integer getContainerHostPort(String branchSlug) {
+        ContainerInfo info = containerRegistry.get(branchSlug);
+        if (info != null) {
+            return info.hostPort();
+        }
+        
+        // Si no está en el registro, intentar obtenerlo de Docker
+        if (dockerClient == null) return null;
+        
+        String containerName = "inv-" + sanitizeSlug(branchSlug);
+        try {
+            var containers = dockerClient.listContainersCmd()
+                    .withNameFilter(List.of(containerName))
+                    .exec();
+            
+            if (!containers.isEmpty()) {
+                var ports = containers.get(0).getPorts();
+                if (ports != null && ports.length > 0) {
+                    return ports[0].getPublicPort();
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Error obteniendo puerto del contenedor {}: {}", containerName, e.getMessage());
+        }
+        return null;
+    }
 
     private boolean containerExists(String containerName) {
         if (dockerClient == null) return false;
@@ -314,6 +348,51 @@ public class DockerContainerManager implements ContainerManager {
                 .replaceAll("[^a-z0-9-]", "-")
                 .replaceAll("-+", "-")
                 .replaceAll("^-|-$", "");
+    }
+
+    /**
+     * Espera a que el contenedor esté listo para recibir peticiones HTTP.
+     * Si timeoutSeconds <= 0, espera indefinidamente.
+     *
+     * @param host           Host o alias de red del contenedor (por ejemplo, inv-<slug>)
+     * @param port           Puerto interno del contenedor (por ejemplo, 8080)
+     * @param timeoutSeconds Tiempo máximo de espera en segundos; si <= 0, sin límite
+     */
+    private void waitForContainerReady(String host, int port, int timeoutSeconds) {
+        String healthUrl = "http://" + host + ":" + port + "/api/products";
+        log.info("Esperando a que el contenedor esté listo en {}:{}...", host, port);
+
+        long startTime = System.currentTimeMillis();
+        long timeoutMillis = timeoutSeconds > 0 ? timeoutSeconds * 1000L : Long.MAX_VALUE;
+
+        while (System.currentTimeMillis() - startTime < timeoutMillis) {
+            try {
+                java.net.HttpURLConnection connection = (java.net.HttpURLConnection)
+                        new java.net.URL(healthUrl).openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(2000);
+                connection.setReadTimeout(2000);
+
+                int responseCode = connection.getResponseCode();
+                if (responseCode == 200 || responseCode == 401 || responseCode == 403) {
+                    long elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000;
+                    log.info("Contenedor listo en puerto {} después de {} segundos", port, elapsedSeconds);
+                    return;
+                }
+                connection.disconnect();
+            } catch (Exception e) {
+                // El contenedor aún no está listo, seguir intentando
+            }
+
+            try {
+                Thread.sleep(1000); // Esperar 1 segundo antes de reintentar
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        log.warn("Timeout esperando al contenedor en puerto {}. El contenedor puede no estar completamente listo.", port);
     }
 
     private ContainerInfo createMockContainerInfo(String branchSlug) {

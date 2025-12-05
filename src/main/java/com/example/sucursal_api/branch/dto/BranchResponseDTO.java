@@ -12,6 +12,7 @@ public record BranchResponseDTO(
         BigDecimal lat,
         BigDecimal lng,
         boolean active,
-        String coverImageUrl
+        String coverImageUrl,
+        Integer inventoryPort
 ) {}
 
