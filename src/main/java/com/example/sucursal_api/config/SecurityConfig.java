@@ -47,12 +47,20 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 
+                        // 🔥 TODAS las rutas del chatbot quedan abiertas
+                        .requestMatchers("/chatbot/api/**").permitAll()
+
+                        // 🔥 si quieres liberar TODO inventario:
+                        .requestMatchers("/api/products/**").permitAll()
+                        .requestMatchers("/api/branch-stock/**").permitAll()
+                        .requestMatchers("/api/movements/**").permitAll()
+
+                        // tus reglas normales
                         .requestMatchers(HttpMethod.GET, "/api/branches/**").hasAnyRole("ADMIN","EMPLOYEE")
                         .requestMatchers(HttpMethod.GET, "/api/auth/**").authenticated()
 
-
+                        // admin para el resto
                         .requestMatchers(HttpMethod.POST, "/api/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/**").hasRole("ADMIN")
@@ -60,6 +68,7 @@ public class SecurityConfig {
 
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

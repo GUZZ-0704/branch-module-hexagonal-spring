@@ -37,7 +37,7 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String p = request.getRequestURI();
-        return ("/api/auth/login".equals(p) || "/api/auth/refresh".equals(p) || p.startsWith("/files/"));
+        return ("/api/auth/login".equals(p) || "/api/auth/refresh".equals(p) || p.startsWith("/files/") || p.startsWith("/chatbot/api/"));
     }
 
 
